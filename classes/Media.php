@@ -705,6 +705,12 @@ class MediaCore
         foreach ($cssFilesByMedia as $media => $mediaInfos) {
             $cacheFilename = $cachePath.'v_'.$version.'_'.$compressedCssFilesInfos[$media]['key'].'_'.$media.'.css';
             if ($mediaInfos['date'] > $compressedCssFilesInfos[$media]['date']) {
+                
+                // Remove previous generated CSS files
+                $filenameNeedle = $compressedCssFilesInfos[$media]['key'] . '_' . $media . '.css';
+                self::removeOldCccFiles($cachePath, $filenameNeedle, 14);
+
+                // Generate new CSS file
                 $cssSplitNeedRefresh = true;
                 $cacheFilename = $cachePath.'v_'.$version.'_'.$compressedCssFilesInfos[$media]['key'].'_'.$media.'.css';
                 $compressedCssFiles[$media] = '';
@@ -931,7 +937,12 @@ class MediaCore
             if (!empty($compressedJsFilesNotFound)) {
                 $content = '/* WARNING ! file(s) not found : "'.implode(',', $compressedJsFilesNotFound).'" */'."\n".$content;
             }
+            
+            // Remove previous generated JS files
+            $filenameNeedle = $compressedJsFilename . '.js';
+            self::removeOldCccFiles($cachePath, $filenameNeedle, 14);
 
+            // Create new JS file
             file_put_contents($compressedJsPath, $content);
             chmod($compressedJsPath, 0777);
         }
@@ -1181,4 +1192,35 @@ class MediaCore
 
         return "\n".$original;
     }
+    
+    /**
+     * Remove previously generated CCC files if they are older than $daysFromNow
+     *
+     * @param string $cachePath
+     * @param string $filenameNeedle
+     * @param int $daysFromNow
+     *
+     * @return bool|string
+     * @since   1.1.x
+     * @version 1.1.x Initial version
+     */
+    private static function removeOldCccFiles($cachePath, $filenameNeedle, $daysFromNow = 14) {
+        $daysFromNow = is_int($daysFromNow) && $daysFromNow >= 0 ? $daysFromNow : 14;
+        $timeThreshold = strtotime("- $daysFromNow");
+        $files = scandir($cachePath);
+
+        if (is_array($files) && !empty($files)) {
+            foreach ($files as $filename) {
+                if (strpos($filename, $filenameNeedle) !== false // if file matches hash, media and file type
+                    && filemtime($cachePath . $filename) < $timeThreshold // and if file is older than $timeThreshold
+                ) {
+                    unlink($cachePath . $filename);
+                }
+            }
+        }
+
+        return true;
+
+    }
+    
 }
