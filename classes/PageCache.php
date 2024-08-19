@@ -207,6 +207,19 @@ class PageCacheCore
             }
         }
 
+        // Invalidate parent categories to avoid stale subcategory-data
+        if ($entityType === 'category' && $idEntity) {
+            $id_parent = (int)$conn->getValue('SELECT id_parent
+                FROM `' . _DB_PREFIX_ . 'category`
+                WHERE id_category = ' . (int)$idEntity . '
+                  AND active = 1
+                  AND is_root_category = 0');
+
+            if ($id_parent) {
+                self::invalidateEntity('category', $id_parent);
+            }
+        }
+
         $keysToInvalidate = array_merge(
             $keysToInvalidate,
             static::getKeysToInvalidate($entityType, $idEntity)
